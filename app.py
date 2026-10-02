@@ -1,5 +1,14 @@
 import streamlit as st
 
+from core.database.schema import initialize_database
+
+
+# ============================================================
+# INITIALISATION DE LA BASE DE DONNÉES
+# ============================================================
+
+initialize_database()
+
 
 # ============================================================
 # CONFIGURATION DE LA PAGE
