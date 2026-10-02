@@ -144,6 +144,12 @@ class ParcelleService:
         """
 
         return self.repository.get_all()
+    
+    def count_parcelles(self) -> int:
+       """
+       Retourne le nombre réel de parcelles en base SQLite.
+       """
+       return self.repository.count()
 
     # ========================================================
     # UPDATE

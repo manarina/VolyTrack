@@ -200,6 +200,7 @@ surface_m2 = sum(
 )
 
 
+
 # ============================================================
 # FILTRES
 # ============================================================
@@ -209,35 +210,86 @@ st.subheader("🔎 Filtres d'analyse")
 filter_col1, filter_col2, filter_col3 = st.columns(3)
 
 
+# ============================================================
+# FILTRE PARCELLE
+# ============================================================
+
 with filter_col1:
+
+    parcelle_filter_options = {
+        "Toutes les parcelles": None
+    }
+
+    for parcelle in parcelles:
+
+        parcelle_filter_options[
+            f"{parcelle.nom} (ID {parcelle.id})"
+        ] = parcelle.id
 
     selected_parcelle = st.selectbox(
         "Parcelle",
-        options=[
-            "Toutes les parcelles"
-        ]
-        + [
-            f"{parcelle.nom} (ID {parcelle.id})"
-            for parcelle in parcelles
-        ],
+        options=list(
+            parcelle_filter_options.keys()
+        ),
         key="analytics_parcelle_filter",
     )
 
+    selected_parcelle_id = (
+        parcelle_filter_options[
+            selected_parcelle
+        ]
+    )
+
+
+# ============================================================
+# FILTRE CULTURE
+# ============================================================
 
 with filter_col2:
 
+    # Si une parcelle est sélectionnée,
+    # seules ses cultures sont proposées.
+    if selected_parcelle_id is not None:
+
+        cultures_du_parcelle = [
+            culture
+            for culture in cultures
+            if culture.parcelle_id
+            == selected_parcelle_id
+        ]
+
+    else:
+
+        cultures_du_parcelle = cultures
+
+    culture_filter_options = {
+        "Toutes les cultures": None
+    }
+
+    for culture in cultures_du_parcelle:
+
+        culture_filter_options[
+            f"{culture.nom} (ID {culture.id})"
+        ] = culture.id
+
     selected_culture = st.selectbox(
         "Culture",
-        options=[
-            "Toutes les cultures"
-        ]
-        + [
-            f"{culture.nom} (ID {culture.id})"
-            for culture in cultures
-        ],
+        options=list(
+            culture_filter_options.keys()
+        ),
         key="analytics_culture_filter",
     )
 
+    selected_culture_id = (
+        culture_filter_options[
+            selected_culture
+        ]
+    )
+
+
+# ============================================================
+# FILTRE PÉRIODE
+# ============================================================
 
 with filter_col3:
 
@@ -252,38 +304,7 @@ with filter_col3:
     )
 
 
-# ============================================================
-# IDS DES FILTRES
-# ============================================================
 
-selected_parcelle_id = None
-
-if selected_parcelle != "Toutes les parcelles":
-
-    selected_parcelle_id = next(
-        (
-            parcelle.id
-            for parcelle in parcelles
-            if f"{parcelle.nom} (ID {parcelle.id})"
-            == selected_parcelle
-        ),
-        None,
-    )
-
-
-selected_culture_id = None
-
-if selected_culture != "Toutes les cultures":
-
-    selected_culture_id = next(
-        (
-            culture.id
-            for culture in cultures
-            if f"{culture.nom} (ID {culture.id})"
-            == selected_culture
-        ),
-        None,
-    )
 
 
 # ============================================================

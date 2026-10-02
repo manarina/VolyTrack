@@ -20,6 +20,8 @@ Fonctionnalités :
 import streamlit as st
 import pandas as pd
 
+from core.models.recolte import Recolte
+
 from core.services.recolte_service import RecolteService
 from core.services.culture_service import CultureService
 from core.services.parcelle_service import ParcelleService
@@ -282,6 +284,9 @@ else:
 
         col1, col2 = st.columns(2)
 
+        # ----------------------------------------------------
+        # CULTURE + INFORMATIONS PRINCIPALES
+        # ----------------------------------------------------
 
         with col1:
 
@@ -302,7 +307,6 @@ else:
                     )
                 ] = culture.id
 
-
             selected_create_culture = st.selectbox(
                 "Culture *",
                 options=list(
@@ -311,12 +315,10 @@ else:
                 key="recolte_create_culture",
             )
 
-
             date_recolte = st.date_input(
                 "Date de récolte *",
                 key="recolte_create_date",
             )
-
 
             quantite = st.number_input(
                 "Quantité *",
@@ -326,6 +328,9 @@ else:
                 key="recolte_create_quantite",
             )
 
+        # ----------------------------------------------------
+        # UNITÉ + QUALITÉ + DESCRIPTION
+        # ----------------------------------------------------
 
         with col2:
 
@@ -336,20 +341,25 @@ else:
                 key="recolte_create_unite",
             )
 
-
             qualite = st.text_input(
                 "Qualité",
-                placeholder="Ex. Excellente, bonne, moyenne...",
+                placeholder=(
+                    "Ex. Excellente, bonne, moyenne..."
+                ),
                 key="recolte_create_qualite",
             )
 
-
             description = st.text_area(
                 "Description",
-                placeholder="Informations complémentaires...",
+                placeholder=(
+                    "Informations complémentaires..."
+                ),
                 key="recolte_create_description",
             )
 
+        # ----------------------------------------------------
+        # BOUTON D'ENREGISTREMENT
+        # ----------------------------------------------------
 
         submitted = st.form_submit_button(
             "💾 Enregistrer la récolte",
@@ -357,10 +367,17 @@ else:
             use_container_width=True,
         )
 
+        # ----------------------------------------------------
+        # CRÉATION
+        # ----------------------------------------------------
 
         if submitted:
 
             try:
+
+                # --------------------------------------------
+                # RÉCUPÉRATION DE LA CULTURE
+                # --------------------------------------------
 
                 culture_id = (
                     create_culture_options[
@@ -368,6 +385,9 @@ else:
                     ]
                 )
 
+                # --------------------------------------------
+                # VALIDATIONS
+                # --------------------------------------------
 
                 if quantite <= 0:
 
@@ -375,26 +395,42 @@ else:
                         "La quantité doit être supérieure à zéro."
                     )
 
-
                 if not unite.strip():
 
                     raise ValueError(
                         "L'unité ne doit pas être vide."
                     )
 
+                # --------------------------------------------
+                # CRÉATION DU MODÈLE RECOLTE
+                # --------------------------------------------
 
-                recolte_service.create_recolte(
+                recolte = Recolte(
                     culture_id=culture_id,
                     date_recolte=date_recolte.isoformat(),
                     quantite=float(quantite),
                     unite=unite.strip(),
-                    qualite=qualite.strip() or None,
+                    qualite=(
+                        qualite.strip()
+                        if qualite
+                        else None
+                    ),
                     description=(
                         description.strip()
-                        or None
+                        if description
+                        else None
                     ),
                 )
 
+                # --------------------------------------------
+                # APPEL DU SERVICE
+                # --------------------------------------------
+
+                recolte = (
+                    recolte_service.create_recolte(
+                        recolte
+                    )
+                )
 
                 st.success(
                     "✅ Récolte enregistrée avec succès."
@@ -402,19 +438,18 @@ else:
 
                 st.rerun()
 
-
             except (ValueError, TypeError) as exc:
 
                 st.error(
                     f"❌ {exc}"
                 )
 
-
             except Exception as exc:
 
                 st.error(
                     f"❌ Une erreur est survenue : {exc}"
                 )
+
 
 
 # ============================================================

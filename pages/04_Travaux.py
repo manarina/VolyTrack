@@ -19,6 +19,7 @@ Fonctionnalités :
 import streamlit as st
 import pandas as pd
 
+from core.models.travail import Travail
 from core.services.travail_service import TravailService
 from core.services.parcelle_service import ParcelleService
 from core.services.culture_service import CultureService
@@ -219,6 +220,10 @@ else:
 
         with col1:
 
+            # ------------------------------------------------
+            # PARCELLE
+            # ------------------------------------------------
+
             parcelle_options = {
                 f"{parcelle.nom} (ID {parcelle.id})":
                 parcelle.id
@@ -233,6 +238,10 @@ else:
                 key="travail_create_parcelle",
             )
 
+            # ------------------------------------------------
+            # TYPE DE TRAVAIL
+            # ------------------------------------------------
+
             type_travail = st.text_input(
                 "Type de travail *",
                 placeholder=(
@@ -241,6 +250,10 @@ else:
                 key="travail_create_type",
             )
 
+            # ------------------------------------------------
+            # DATE
+            # ------------------------------------------------
+
             date_travail = st.date_input(
                 "Date du travail *",
                 key="travail_create_date",
@@ -248,25 +261,45 @@ else:
 
         with col2:
 
+            # ------------------------------------------------
+            # CULTURE OPTIONNELLE
+            # ------------------------------------------------
+
+            # Récupérer l'ID de la parcelle sélectionnée
+            selected_parcelle_id = parcelle_options[
+              selected_parcelle_label
+            ]
+
+            # Garder uniquement les cultures
+            # appartenant à cette parcelle
+            cultures_de_la_parcelle = [
+                culture
+                  for culture in cultures
+                if culture.parcelle_id == selected_parcelle_id
+           ]
+
             culture_options = {
-                "Aucune culture":
-                None
+                "Aucune culture": None
             }
 
-            for culture in cultures:
+            for culture in cultures_de_la_parcelle:
 
-                culture_options[
-                    f"{culture.nom} "
-                    f"(ID {culture.id})"
-                ] = culture.id
+             culture_options[
+                f"{culture.nom} (ID {culture.id})"
+             ] = culture.id
 
             selected_culture_label = st.selectbox(
                 "Culture",
-                options=list(
-                    culture_options.keys()
-                ),
-                key="travail_create_culture",
-            )
+            options=list(
+                culture_options.keys()
+            ),
+            key="travail_create_culture",
+          )
+
+            
+            # ------------------------------------------------
+            # COÛT
+            # ------------------------------------------------
 
             cout = st.number_input(
                 "Coût (Ar)",
@@ -276,6 +309,10 @@ else:
                 key="travail_create_cout",
             )
 
+            # ------------------------------------------------
+            # DESCRIPTION
+            # ------------------------------------------------
+
             description = st.text_area(
                 "Description",
                 placeholder=(
@@ -284,15 +321,27 @@ else:
                 key="travail_create_description",
             )
 
+        # ----------------------------------------------------
+        # BOUTON
+        # ----------------------------------------------------
+
         submitted = st.form_submit_button(
             "💾 Enregistrer le travail",
             type="primary",
             use_container_width=True,
         )
 
+        # ----------------------------------------------------
+        # TRAITEMENT DE LA CRÉATION
+        # ----------------------------------------------------
+
         if submitted:
 
             try:
+
+                # --------------------------------------------
+                # RÉCUPÉRATION DES IDENTIFIANTS
+                # --------------------------------------------
 
                 parcelle_id = parcelle_options[
                     selected_parcelle_label
@@ -302,20 +351,52 @@ else:
                     selected_culture_label
                 ]
 
-                travail_service.create_travail(
-                    parcelle_id=parcelle_id,
-                    type_travail=type_travail.strip(),
-                    date_travail=date_travail.isoformat(),
-                    culture_id=culture_id,
-                    cout=float(cout),
-                    description=description.strip() or None,
-                )
+                # --------------------------------------------
+                # VALIDATION DU TYPE DE TRAVAIL
+                # --------------------------------------------
 
-                st.success(
-                    "✅ Travail enregistré avec succès."
-                )
+                if not type_travail.strip():
 
-                st.rerun()
+                    st.error(
+                        "❌ Le type de travail est obligatoire."
+                    )
+
+                else:
+
+                    # ----------------------------------------
+                    # CRÉATION DE L'OBJET TRAVAIL
+                    # ----------------------------------------
+
+                    travail = Travail(
+                        parcelle_id=parcelle_id,
+                        culture_id=culture_id,
+                        type_travail=type_travail.strip(),
+                        date_travail=(
+                            date_travail.isoformat()
+                        ),
+                        cout=float(cout),
+                        description=(
+                            description.strip()
+                            if description
+                            else None
+                        ),
+                    )
+
+                    # ----------------------------------------
+                    # ENREGISTREMENT VIA LE SERVICE
+                    # ----------------------------------------
+
+                    travail = (
+                        travail_service.create_travail(
+                            travail
+                        )
+                    )
+
+                    st.success(
+                        "✅ Travail enregistré avec succès."
+                    )
+
+                    st.rerun()
 
             except (ValueError, TypeError) as exc:
 
@@ -328,66 +409,6 @@ else:
                 st.error(
                     f"❌ Une erreur est survenue : {exc}"
                 )
-
-
-st.divider()
-
-
-# ============================================================
-# LISTE DES TRAVAUX
-# ============================================================
-
-st.subheader("📋 Liste des travaux")
-
-if not travaux:
-
-    st.info(
-        "Aucun travail ne correspond aux critères."
-    )
-
-else:
-
-    table_rows = []
-
-    for travail in travaux:
-
-        table_rows.append(
-            {
-                "ID": travail.id,
-                "Type de travail": travail.type_travail,
-                "Date": travail.date_travail,
-                "Parcelle": parcelle_names.get(
-                    travail.parcelle_id,
-                    f"ID {travail.parcelle_id}",
-                ),
-                "Culture": (
-                    culture_names.get(
-                        travail.culture_id,
-                        f"ID {travail.culture_id}",
-                    )
-                    if travail.culture_id is not None
-                    else "—"
-                ),
-                "Coût (Ar)": float(
-                    travail.cout
-                ),
-                "Description": (
-                    travail.description
-                    or ""
-                ),
-            }
-        )
-
-    travaux_df = pd.DataFrame(
-        table_rows
-    )
-
-    st.dataframe(
-        travaux_df,
-        use_container_width=True,
-        hide_index=True,
-    )
-
 
 st.divider()
 

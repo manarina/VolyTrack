@@ -207,6 +207,22 @@ class ParcelleRepository:
 
         finally:
             connection.close()
+            
+    def count(self) -> int:
+       """
+       Retourne le nombre total de parcelles.
+       """
+       conn = get_connection()
+
+       try:
+           cursor = conn.cursor()
+           cursor.execute("SELECT COUNT(*) FROM parcelles")
+           result = cursor.fetchone()
+
+           return int(result[0]) if result else 0
+
+       finally:
+           conn.close()
 
     # ========================================================
     # UPDATE
@@ -293,6 +309,8 @@ class ParcelleRepository:
 
         finally:
             connection.close()
+
+ 
 
     # ========================================================
     # DELETE

@@ -19,6 +19,7 @@ La logique métier est déléguée à CultureService.
 import streamlit as st
 import pandas as pd
 
+from core.models.culture import Culture
 from core.services.culture_service import CultureService
 from core.services.parcelle_service import ParcelleService
 
@@ -181,7 +182,6 @@ search_query = st.text_input(
 # ============================================================
 # AJOUT D'UNE CULTURE
 # ============================================================
-
 with st.expander(
     "➕ Ajouter une nouvelle culture",
     expanded=False,
@@ -296,21 +296,45 @@ with st.expander(
                 ),
             )
 
+            # ------------------------------------------------
+            # BOUTON
+            # ------------------------------------------------
+
             submitted = st.form_submit_button(
                 "💾 Enregistrer la culture",
                 type="primary",
                 use_container_width=True,
             )
 
+            # ------------------------------------------------
+            # CRÉATION
+            # ------------------------------------------------
+
             if submitted:
 
                 try:
 
-                    culture = (
-                        culture_service.create_culture(
+                    # Validation du nom
+                    if not nom.strip():
+
+                        st.error(
+                            "❌ Le nom de la culture est obligatoire."
+                        )
+
+                    else:
+
+                        # ----------------------------------------
+                        # CRÉATION DE L'OBJET CULTURE
+                        # ----------------------------------------
+
+                        culture = Culture(
                             parcelle_id=selected_parcelle_id,
-                            nom=nom,
-                            variete=variete or None,
+                            nom=nom.strip(),
+                            variete=(
+                                variete.strip()
+                                if variete
+                                else None
+                            ),
                             date_semis=(
                                 date_semis.isoformat()
                                 if date_semis
@@ -323,18 +347,28 @@ with st.expander(
                             ),
                             statut=statut,
                             description=(
-                                description
-                                or None
+                                description.strip()
+                                if description
+                                else None
                             ),
                         )
-                    )
 
-                    st.success(
-                        f"✅ Culture « {culture.nom} » "
-                        "créée avec succès."
-                    )
+                        # ----------------------------------------
+                        # ENREGISTREMENT VIA LE SERVICE
+                        # ----------------------------------------
 
-                    st.rerun()
+                        culture = (
+                            culture_service.create_culture(
+                                culture
+                            )
+                        )
+
+                        st.success(
+                            f"✅ Culture « {culture.nom} » "
+                            "créée avec succès."
+                        )
+
+                        st.rerun()
 
                 except (ValueError, TypeError) as exc:
 
@@ -350,7 +384,6 @@ with st.expander(
 
 
 st.divider()
-
 
 # ============================================================
 # LISTE DES CULTURES

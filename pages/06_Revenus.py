@@ -21,6 +21,8 @@ Fonctionnalités :
 import streamlit as st
 import pandas as pd
 
+from core.models.revenu import Revenu
+
 from core.services.revenu_service import RevenuService
 from core.services.parcelle_service import ParcelleService
 from core.services.culture_service import CultureService
@@ -294,6 +296,10 @@ with st.form(
 
     col1, col2 = st.columns(2)
 
+    # --------------------------------------------------------
+    # INFORMATIONS DU REVENU
+    # --------------------------------------------------------
+
     with col1:
 
         produit = st.text_input(
@@ -325,6 +331,10 @@ with st.form(
             key="revenu_create_date",
         )
 
+    # --------------------------------------------------------
+    # PARCELLE + CULTURE
+    # --------------------------------------------------------
+
     with col2:
 
         montant_calcule = (
@@ -337,9 +347,12 @@ with st.form(
             f"{montant_calcule:,.0f} Ar",
         )
 
+        # ----------------------------------------------------
+        # PARCELLES
+        # ----------------------------------------------------
+
         create_parcelle_options = {
-            "Aucune parcelle":
-            None
+            "Aucune parcelle": None
         }
 
         for parcelle in parcelles:
@@ -356,12 +369,31 @@ with st.form(
             key="revenu_create_parcelle",
         )
 
+        selected_create_parcelle_id = (
+            create_parcelle_options[
+                selected_create_parcelle
+            ]
+        )
+
+        # ----------------------------------------------------
+        # CULTURES DE LA PARCELLE
+        # ----------------------------------------------------
+
+        cultures_de_la_parcelle = [
+            culture
+            for culture in cultures
+            if (
+                selected_create_parcelle_id is not None
+                and culture.parcelle_id
+                == selected_create_parcelle_id
+            )
+        ]
+
         create_culture_options = {
-            "Aucune culture":
-            None
+            "Aucune culture": None
         }
 
-        for culture in cultures:
+        for culture in cultures_de_la_parcelle:
 
             create_culture_options[
                 f"{culture.nom} (ID {culture.id})"
@@ -383,15 +415,27 @@ with st.form(
             key="revenu_create_description",
         )
 
+    # --------------------------------------------------------
+    # BOUTON D'ENREGISTREMENT
+    # --------------------------------------------------------
+
     submitted = st.form_submit_button(
         "💾 Enregistrer le revenu",
         type="primary",
         use_container_width=True,
     )
 
+    # --------------------------------------------------------
+    # CRÉATION DU REVENU
+    # --------------------------------------------------------
+
     if submitted:
 
         try:
+
+            # ------------------------------------------------
+            # VALIDATION
+            # ------------------------------------------------
 
             if not produit.strip():
 
@@ -411,6 +455,10 @@ with st.form(
                     "Le prix unitaire ne peut pas être négatif."
                 )
 
+            # ------------------------------------------------
+            # RÉCUPÉRATION DES IDENTIFIANTS
+            # ------------------------------------------------
+
             parcelle_id = (
                 create_parcelle_options[
                     selected_create_parcelle
@@ -423,12 +471,20 @@ with st.form(
                 ]
             )
 
+            # ------------------------------------------------
+            # CALCUL DU MONTANT
+            # ------------------------------------------------
+
             montant = (
                 float(quantite)
                 * float(prix_unitaire)
             )
 
-            revenu_service.create_revenu(
+            # ------------------------------------------------
+            # CRÉATION DU MODÈLE REVENU
+            # ------------------------------------------------
+
+            revenu = Revenu(
                 produit=produit.strip(),
                 quantite=float(quantite),
                 prix_unitaire=float(prix_unitaire),
@@ -436,7 +492,21 @@ with st.form(
                 date_revenu=date_revenu.isoformat(),
                 parcelle_id=parcelle_id,
                 culture_id=culture_id,
-                description=description.strip() or None,
+                description=(
+                    description.strip()
+                    if description
+                    else None
+                ),
+            )
+
+            # ------------------------------------------------
+            # APPEL DU SERVICE
+            # ------------------------------------------------
+
+            revenu = (
+                revenu_service.create_revenu(
+                    revenu
+                )
             )
 
             st.success(
@@ -459,6 +529,8 @@ with st.form(
 
 
 st.divider()
+
+
 
 
 # ============================================================

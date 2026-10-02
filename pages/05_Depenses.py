@@ -19,6 +19,8 @@ Fonctionnalités :
 import streamlit as st
 import pandas as pd
 
+from core.models.depense import Depense
+
 from core.services.depense_service import DepenseService
 from core.services.parcelle_service import ParcelleService
 from core.services.culture_service import CultureService
@@ -290,6 +292,10 @@ with st.form(
 
     col1, col2 = st.columns(2)
 
+    # --------------------------------------------------------
+    # INFORMATIONS DE LA DÉPENSE
+    # --------------------------------------------------------
+
     with col1:
 
         categorie = st.text_input(
@@ -313,11 +319,18 @@ with st.form(
             key="depense_create_date",
         )
 
+    # --------------------------------------------------------
+    # PARCELLE + CULTURE
+    # --------------------------------------------------------
+
     with col2:
 
+        # ----------------------------------------------------
+        # PARCELLES
+        # ----------------------------------------------------
+
         create_parcelle_options = {
-            "Aucune parcelle":
-            None
+            "Aucune parcelle": None
         }
 
         for parcelle in parcelles:
@@ -334,12 +347,31 @@ with st.form(
             key="depense_create_parcelle",
         )
 
+        selected_create_parcelle_id = (
+            create_parcelle_options[
+                selected_create_parcelle
+            ]
+        )
+
+        # ----------------------------------------------------
+        # CULTURES DE LA PARCELLE
+        # ----------------------------------------------------
+
+        cultures_de_la_parcelle = [
+            culture
+            for culture in cultures
+            if (
+                selected_create_parcelle_id is not None
+                and culture.parcelle_id
+                == selected_create_parcelle_id
+            )
+        ]
+
         create_culture_options = {
-            "Aucune culture":
-            None
+            "Aucune culture": None
         }
 
-        for culture in cultures:
+        for culture in cultures_de_la_parcelle:
 
             create_culture_options[
                 f"{culture.nom} (ID {culture.id})"
@@ -361,11 +393,19 @@ with st.form(
             key="depense_create_description",
         )
 
+    # --------------------------------------------------------
+    # BOUTON D'ENREGISTREMENT
+    # --------------------------------------------------------
+
     submitted = st.form_submit_button(
         "💾 Enregistrer la dépense",
         type="primary",
         use_container_width=True,
     )
+
+    # --------------------------------------------------------
+    # CRÉATION
+    # --------------------------------------------------------
 
     if submitted:
 
@@ -383,20 +423,56 @@ with st.form(
                 ]
             )
 
-            depense_service.create_depense(
-                categorie=categorie.strip(),
-                montant=float(montant),
-                date_depense=date_depense.isoformat(),
-                parcelle_id=parcelle_id,
-                culture_id=culture_id,
-                description=description.strip() or None,
-            )
+            # ------------------------------------------------
+            # VALIDATION MINIMALE
+            # ------------------------------------------------
 
-            st.success(
-                "✅ Dépense enregistrée avec succès."
-            )
+            if not categorie.strip():
 
-            st.rerun()
+                st.error(
+                    "❌ La catégorie de dépense est obligatoire."
+                )
+
+            elif montant < 0:
+
+                st.error(
+                    "❌ Le montant ne peut pas être négatif."
+                )
+
+            else:
+
+                # --------------------------------------------
+                # CRÉATION DU MODÈLE DEPENSE
+                # --------------------------------------------
+
+                depense = Depense(
+                    categorie=categorie.strip(),
+                    montant=float(montant),
+                    date_depense=date_depense.isoformat(),
+                    parcelle_id=parcelle_id,
+                    culture_id=culture_id,
+                    description=(
+                        description.strip()
+                        if description
+                        else None
+                    ),
+                )
+
+                # --------------------------------------------
+                # APPEL DU SERVICE
+                # --------------------------------------------
+
+                depense = (
+                    depense_service.create_depense(
+                        depense
+                    )
+                )
+
+                st.success(
+                    "✅ Dépense enregistrée avec succès."
+                )
+
+                st.rerun()
 
         except (ValueError, TypeError) as exc:
 

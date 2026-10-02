@@ -19,6 +19,13 @@ import streamlit as st
 import pandas as pd
 
 from core.services.parcelle_service import ParcelleService
+from core.models.parcelle import Parcelle
+
+from core.repositories.parcelle_repository import ParcelleRepository
+
+repository = ParcelleRepository()
+
+print(repository.count())
 
 
 # ============================================================
@@ -78,7 +85,7 @@ except Exception as exc:
 # INDICATEURS
 # ============================================================
 
-total_parcelles = len(parcelles)
+total_parcelles = service.count_parcelles()
 
 total_superficie = sum(
     parcelle.superficie
@@ -207,36 +214,43 @@ with st.expander(
             use_container_width=True,
         )
 
-        if submitted:
+    if submitted:
 
-            try:
+        try:
 
-                parcelle = service.create_parcelle(
-                    nom=nom,
-                    superficie=superficie,
-                    unite_superficie=unite_superficie,
-                    localisation=localisation or None,
-                    description=description or None,
+            if not nom.strip():
+                raise ValueError(
+                    "Le nom de la parcelle est obligatoire."
                 )
 
-                st.success(
-                    f"✅ Parcelle « {parcelle.nom} » "
-                    "créée avec succès."
-                )
+            parcelle = Parcelle(
+                nom=nom.strip(),
+                superficie=float(superficie),
+                unite_superficie=unite_superficie,
+                localisation=localisation.strip() or None,
+                description=description.strip() or None,
+            )
 
-                st.rerun()
+            parcelle = service.create_parcelle(parcelle)
 
-            except (ValueError, TypeError) as exc:
+            st.success(
+                f"✅ Parcelle « {parcelle.nom} » "
+                "créée avec succès."
+            )
 
-                st.error(
-                    f"❌ {exc}"
-                )
+            st.rerun()
 
-            except Exception as exc:
+        except (ValueError, TypeError) as exc:
 
-                st.error(
-                    f"❌ Une erreur est survenue : {exc}"
-                )
+            st.error(
+                f"❌ {exc}"
+            )
+
+        except Exception as exc:
+
+            st.error(
+                f"❌ Une erreur est survenue : {exc}"
+            )
 
 
 st.divider()
